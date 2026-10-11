@@ -1,0 +1,11 @@
+flowchart TD
+    A[Other Android Apps] --> B[Android Notification Manager]
+    B -->|posted or updated event| C[NotificationListenerService]
+    C --> D[Normalize and apply capture/privacy rules]
+    D --> E[Repository]
+    E --> F[(Room / SQLite)]
+    F --> G[ViewModel and Flow]
+    G --> H[Jetpack Compose UI]
+    H --> I[Search, filters, bookmarks, deletion]
+    J[WorkManager cleanup] --> E
+    K[Android Settings] -->|user grants/revokes access| C

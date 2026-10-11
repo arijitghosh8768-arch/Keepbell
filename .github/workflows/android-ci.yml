@@ -1,0 +1,50 @@
+name: Android CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Pin third-party actions to reviewed commit SHAs before production use.
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant Gradle wrapper execute permission
+        run: chmod +x ./gradlew
+
+      - name: Unit tests
+        run: ./gradlew test
+
+      - name: Android lint
+        run: ./gradlew lint
+
+      - name: Assemble debug
+        run: ./gradlew assembleDebug
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: |
+            **/build/reports/tests/
+            **/build/reports/lint-results*
+          if-no-files-found: ignore
