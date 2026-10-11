@@ -77,16 +77,15 @@ class NotificationExtractorTest {
             key = "telegram_msg_1"
         )
 
-        val result = extractor.extract(sbn)
+        val candidate = extractor.extract(sbn)
 
-        assertNotNull(result)
-        assertEquals("org.telegram.messenger", result?.packageName)
-        assertEquals("Alice", result?.title)
-        assertEquals("Hello there", result?.body)
-        assertEquals(1234L, result?.eventTimeMs)
-        assertEquals(5000L, result?.capturedAtMs)
-        assertEquals("msg", result?.category)
-        assertEquals(sbn.key, result?.sourceNotificationKey)
+        assertNotNull(candidate)
+        assertEquals("org.telegram.messenger", candidate?.packageName)
+        assertEquals("Alice", candidate?.title)
+        assertEquals("Hello there", candidate?.body)
+        assertEquals(1234L, candidate?.eventTimeMs)
+        assertEquals("msg", candidate?.category)
+        assertEquals(sbn.key, candidate?.sourceNotificationKey)
     }
 
     @Test
@@ -102,8 +101,8 @@ class NotificationExtractorTest {
             text = "Self alert"
         )
 
-        val result = extractor.extract(sbn)
-        assertNull(result)
+        val candidate = extractor.extract(sbn)
+        assertNull(candidate)
     }
 
     @Test
@@ -121,13 +120,12 @@ class NotificationExtractorTest {
             postTime = 1500L
         )
 
-        val result = extractor.extract(sbn)
+        val candidate = extractor.extract(sbn)
 
-        assertNotNull(result)
-        assertEquals("com.sample.silent", result?.packageName)
-        assertNull(result?.title)
-        assertNull(result?.body)
-        assertEquals("No preview available", result?.displayBody)
+        assertNotNull(candidate)
+        assertEquals("com.sample.silent", candidate?.packageName)
+        assertNull(candidate?.title)
+        assertNull(candidate?.body)
     }
 
     @Test
@@ -144,10 +142,10 @@ class NotificationExtractorTest {
             bigText = "Full expanded content of the email"
         )
 
-        val result = extractor.extract(sbn)
+        val candidate = extractor.extract(sbn)
 
-        assertNotNull(result)
-        assertEquals("Full expanded content of the email", result?.body)
+        assertNotNull(candidate)
+        assertEquals("Full expanded content of the email", candidate?.body)
     }
 
     @Test
@@ -164,9 +162,9 @@ class NotificationExtractorTest {
             postTime = 0L
         )
 
-        val result = extractor.extract(sbn)
+        val candidate = extractor.extract(sbn)
 
-        assertNotNull(result)
-        assertEquals(9999L, result?.eventTimeMs)
+        assertNotNull(candidate)
+        assertEquals(9999L, candidate?.eventTimeMs)
     }
 }

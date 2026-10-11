@@ -3,8 +3,7 @@ package com.example.notificationvault.platform.listener
 import android.app.Notification
 import android.content.pm.PackageManager
 import android.service.notification.StatusBarNotification
-import com.example.notificationvault.domain.model.ArchivedNotification
-import java.util.UUID
+import com.example.notificationvault.domain.capture.NotificationCandidate
 
 /**
  * Pure extraction logic to parse allowed fields from a platform [StatusBarNotification].
@@ -18,10 +17,10 @@ class NotificationExtractor(
 ) {
 
     /**
-     * Extracts an [ArchivedNotification] snapshot from a platform notification event.
+     * Extracts a [NotificationCandidate] from a platform notification event.
      * Returns `null` if the notification is posted by Notification Vault itself, or if invalid.
      */
-    fun extract(sbn: StatusBarNotification): ArchivedNotification? {
+    fun extract(sbn: StatusBarNotification): NotificationCandidate? {
         val packageName = sbn.packageName ?: return null
 
         // Self-capture prevention (ARCHITECTURE.md §4, Threat T-11)
@@ -50,23 +49,18 @@ class NotificationExtractor(
 
         val postTime = sbn.postTime
         val eventTimeMs = if (postTime > 0L) postTime else currentTimeMillisProvider()
-        val capturedAtMs = currentTimeMillisProvider()
 
         val sourceNotificationKey = sbn.key
         val category = notification.category
 
-        return ArchivedNotification(
-            id = UUID.randomUUID().toString(),
+        return NotificationCandidate(
             packageName = packageName,
             appLabel = appLabel,
             title = title,
             body = body,
             eventTimeMs = eventTimeMs,
-            capturedAtMs = capturedAtMs,
-            isBookmarked = false,
-            isRead = false,
-            category = category,
-            sourceNotificationKey = sourceNotificationKey
+            sourceNotificationKey = sourceNotificationKey,
+            category = category
         )
     }
 }

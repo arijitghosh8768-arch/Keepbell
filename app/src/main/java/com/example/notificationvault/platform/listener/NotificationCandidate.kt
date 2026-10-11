@@ -1,14 +1,6 @@
 package com.example.notificationvault.platform.listener
 
 /**
- * Encapsulates raw extracted fields from a platform notification before persistence.
+ * Typealias preserving compatibility with the domain-level [NotificationCandidate].
  */
-data class NotificationCandidate(
-    val packageName: String,
-    val appLabel: String? = null,
-    val title: String? = null,
-    val body: String? = null,
-    val eventTimeMs: Long,
-    val sourceNotificationKey: String? = null,
-    val category: String? = null
-)
+typealias NotificationCandidate = com.example.notificationvault.domain.capture.NotificationCandidate

@@ -3,7 +3,10 @@ package com.example.notificationvault.platform.listener
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.example.notificationvault.data.local.VaultDatabase
+import com.example.notificationvault.data.repository.CaptureSettingsRepositoryImpl
 import com.example.notificationvault.data.repository.NotificationRepositoryImpl
+import com.example.notificationvault.domain.capture.CaptureProcessor
+import com.example.notificationvault.domain.capture.CaptureSettingsRepository
 import com.example.notificationvault.domain.repository.NotificationRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +17,8 @@ import kotlinx.coroutines.launch
 /**
  * Platform adapter service binding to Android's NotificationListenerService.
  *
- * Implements lightweight, non-blocking capture of eligible notification events.
+ * Implements lightweight, non-blocking capture of eligible notification events
+ * and delegates processing to [CaptureProcessor].
  * Adheres strictly to the local-first policy and zero payload logging rule.
  */
 class VaultNotificationListener : NotificationListenerService() {
@@ -29,14 +33,23 @@ class VaultNotificationListener : NotificationListenerService() {
         )
     }
 
-    // Resolves repository instance; accessible for test overrides
+    // Resolves capture dependencies; accessible for test overrides
+    var captureProcessor: CaptureProcessor? = null
     var repository: NotificationRepository? = null
+    var captureSettingsRepository: CaptureSettingsRepository? = null
 
-    private fun resolveRepository(): NotificationRepository {
-        return repository ?: synchronized(this) {
-            repository ?: NotificationRepositoryImpl(
-                VaultDatabase.getInstance(applicationContext).notificationDao()
-            ).also { repository = it }
+    private fun resolveCaptureProcessor(): CaptureProcessor {
+        return captureProcessor ?: synchronized(this) {
+            captureProcessor ?: run {
+                val repo = repository ?: NotificationRepositoryImpl(
+                    VaultDatabase.getInstance(applicationContext).notificationDao()
+                )
+                val settingsRepo = captureSettingsRepository ?: CaptureSettingsRepositoryImpl(applicationContext)
+                CaptureProcessor(
+                    notificationRepository = repo,
+                    captureSettingsRepository = settingsRepo
+                ).also { captureProcessor = it }
+            }
         }
     }
 
@@ -44,12 +57,12 @@ class VaultNotificationListener : NotificationListenerService() {
         super.onNotificationPosted(sbn)
         if (sbn == null) return
 
-        val archivedNotification = extractor.extract(sbn) ?: return
+        val candidate = extractor.extract(sbn) ?: return
 
         // Dispatch persistence asynchronously to avoid blocking platform callbacks
         serviceScope.launch {
             try {
-                resolveRepository().saveNotification(archivedNotification)
+                resolveCaptureProcessor().process(candidate)
             } catch (e: Exception) {
                 // Sanitized handling: NEVER log notification payload text or private extras (Threat T-03)
             }
