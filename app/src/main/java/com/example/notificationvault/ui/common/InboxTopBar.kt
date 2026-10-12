@@ -16,7 +16,7 @@ fun InboxTopBar(modifier: Modifier = Modifier) {
     TopAppBar(
         title = {
             Text(
-                "Notification Vault",
+                "Keepbell",
                 style = MaterialTheme.typography.titleLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

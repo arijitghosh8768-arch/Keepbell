@@ -11,7 +11,7 @@
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="Notification Vault"
+        android:label="Keepbell"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
@@ -27,7 +27,7 @@
 
         <service
             android:name=".platform.listener.VaultNotificationListener"
-            android:label="Notification Vault Listener"
+            android:label="Keepbell Listener"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>

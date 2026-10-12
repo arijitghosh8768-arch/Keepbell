@@ -74,7 +74,7 @@ fun OnboardingScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Welcome to Notification Vault",
+                text = "Welcome to Keepbell",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -83,7 +83,7 @@ fun OnboardingScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Keep a private, searchable archive of notification snapshots right on your device.",
+                text = "Keep every ping. A private, searchable archive of notification snapshots right on your device.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
