@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -62,7 +63,7 @@ private fun CenteredMessage(
     }
 }
 
-/** Empty inbox. Shows the settings action only when capture is actually off. */
+/** Empty inbox when the database has 0 saved records. */
 @Composable
 fun EmptyInboxState(accessEnabled: Boolean, onOpenSettings: () -> Unit, modifier: Modifier = Modifier) {
     if (accessEnabled) {
@@ -81,6 +82,18 @@ fun EmptyInboxState(accessEnabled: Boolean, onOpenSettings: () -> Unit, modifier
             action = { Button(onClick = onOpenSettings) { Text("Open settings") } },
         )
     }
+}
+
+/** No results state when active filters or search query produce 0 matches. */
+@Composable
+fun NoResultsState(onClearFilters: () -> Unit, modifier: Modifier = Modifier) {
+    CenteredMessage(
+        icon = Icons.Filled.Search,
+        title = "No matching notifications",
+        message = "No saved notifications matched your search or filter criteria. Try searching for a different term or clearing filters.",
+        modifier = modifier,
+        action = { Button(onClick = onClearFilters) { Text("Clear filters") } }
+    )
 }
 
 @Composable

@@ -99,6 +99,11 @@ interface NotificationRepository {
     suspend fun findByFingerprint(fingerprint: String): ArchivedNotification?
 
     /**
+     * Observes the list of distinct source application packages recorded in the archive.
+     */
+    fun getDistinctPackages(): Flow<List<String>>
+
+    /**
      * Observes the total count of archived notifications.
      */
     fun getNotificationCount(): Flow<Int>

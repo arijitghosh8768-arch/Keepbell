@@ -93,6 +93,9 @@ interface NotificationDao {
     """)
     suspend fun deleteExpiredNonBookmarked(cutoffMs: Long): Int
 
+    @Query("SELECT DISTINCT packageName FROM archived_notifications ORDER BY packageName ASC")
+    fun observeDistinctPackages(): Flow<List<String>>
+
     @Query("SELECT COUNT(*) FROM archived_notifications")
     fun getCount(): Flow<Int>
 

@@ -325,4 +325,15 @@ class NotificationDaoTest {
         assertNotNull(foundByFp)
         assertEquals("key-test", foundByFp?.id)
     }
+
+    @Test
+    fun observeDistinctPackages_returnsSortedUniquePackages() = runTest {
+        val record1 = NotificationEntity(id = "1", packageName = "com.zebra", eventTimeMs = 1L, capturedAtMs = 1L)
+        val record2 = NotificationEntity(id = "2", packageName = "com.alpha", eventTimeMs = 2L, capturedAtMs = 2L)
+        val record3 = NotificationEntity(id = "3", packageName = "com.zebra", eventTimeMs = 3L, capturedAtMs = 3L)
+        dao.insertAll(listOf(record1, record2, record3))
+
+        val packages = dao.observeDistinctPackages().first()
+        assertEquals(listOf("com.alpha", "com.zebra"), packages)
+    }
 }

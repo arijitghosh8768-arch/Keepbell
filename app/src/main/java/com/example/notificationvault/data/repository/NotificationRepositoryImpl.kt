@@ -142,6 +142,11 @@ class NotificationRepositoryImpl(
         }
     }
 
+    override fun getDistinctPackages(): Flow<List<String>> {
+        return notificationDao.observeDistinctPackages()
+            .flowOn(ioDispatcher)
+    }
+
     override fun getNotificationCount(): Flow<Int> {
         return notificationDao.getCount()
             .flowOn(ioDispatcher)
