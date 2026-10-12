@@ -57,7 +57,8 @@ class NotificationRepositoryImpl(
         return if (sanitizedQuery.isEmpty()) {
             getNotifications()
         } else {
-            notificationDao.search(sanitizedQuery)
+            val escapedQuery = escapeSqlLikeWildcards(sanitizedQuery)
+            notificationDao.search(escapedQuery)
                 .map { entities -> entities.toDomain() }
                 .flowOn(ioDispatcher)
         }
@@ -69,7 +70,7 @@ class NotificationRepositoryImpl(
         endTimeMs: Long?,
         query: String?
     ): Flow<List<ArchivedNotification>> {
-        val sanitizedQuery = query?.trim()?.takeIf { it.isNotEmpty() }
+        val sanitizedQuery = query?.trim()?.takeIf { it.isNotEmpty() }?.let { escapeSqlLikeWildcards(it) }
         val sanitizedPackage = packageName?.trim()?.takeIf { it.isNotEmpty() }
 
         return notificationDao.filterCombined(
@@ -150,5 +151,18 @@ class NotificationRepositoryImpl(
     override fun getNotificationCount(): Flow<Int> {
         return notificationDao.getCount()
             .flowOn(ioDispatcher)
+    }
+
+    companion object {
+        /**
+         * Escapes special SQLite LIKE wildcard characters ('%', '_') and the escape character itself ('\').
+         * Pair with SQL clause: LIKE '%' || :query || '%' ESCAPE '\'
+         */
+        fun escapeSqlLikeWildcards(input: String): String {
+            return input
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+        }
     }
 }

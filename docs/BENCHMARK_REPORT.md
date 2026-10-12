@@ -74,9 +74,11 @@ All test assertions passed 100%:
    - When package filter, date range, and search text are provided together, only records satisfying **all three criteria** are returned.
    - Queries with mismatched package or out-of-bounds timestamp return empty results as expected.
 3. **SQL Wildcard & Injection Safety (TC-017):**
-   - Literal `%` search (`"50%"`) returned the promo sentinel item.
-   - Literal `_` search (`"report_q3"`) returned the summary file item.
-   - Raw SQL injection payloads (`"' OR '1'='1"`) are treated safely through Room's parameterized query bindings without syntax error or unauthorized data leakage.
+   - Implemented documented escaping in `NotificationRepositoryImpl.escapeSqlLikeWildcards` paired with SQLite `ESCAPE '\'` in `NotificationDao`.
+   - Literal `%` search (`"50%"`) returns only the literal promo item (`"sentinel_wildcard_percent"`), and does not match arbitrary records.
+   - Literal `_` search (`"report_q3"`) matches only the exact item with an underscore (`"sentinel_wildcard_underscore"`), avoiding false single-character wildcard matches.
+   - Searching for the escape backslash itself (`\` e.g. `"C:\Users"`) is safely escaped and matched.
+   - Raw SQL injection payloads (`"' OR '1'='1"`) are safely bound via Room parameters without query alteration or injection vulnerability.
 
 ---
 

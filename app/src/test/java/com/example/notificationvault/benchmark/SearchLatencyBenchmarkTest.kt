@@ -284,15 +284,40 @@ class SearchLatencyBenchmarkTest {
         val dataset = generateDeterministicDataset(COUNT_QUICK)
         dao.insertAll(dataset)
 
-        // Querying for literal "50%"
+        // 1. Querying for literal "50%": must match sentinel_wildcard_percent only, NOT other items
         val percentResults = repository.filterNotifications(query = "50%").first()
-        assertTrue("Must match record with 50%", percentResults.any { it.id == "sentinel_wildcard_percent" })
+        assertEquals(1, percentResults.size)
+        assertEquals("sentinel_wildcard_percent", percentResults[0].id)
 
-        // Querying for literal "report_q3"
+        // Negative check: query for "50% arbitrary" should NOT match if % is literal
+        val percentNegative = repository.filterNotifications(query = "50% arbitrary").first()
+        assertTrue(percentNegative.isEmpty())
+
+        // 2. Querying for literal "report_q3": must match sentinel_wildcard_underscore only
         val underscoreResults = repository.filterNotifications(query = "report_q3").first()
-        assertTrue("Must match record with report_q3", underscoreResults.any { it.id == "sentinel_wildcard_underscore" })
+        assertEquals(1, underscoreResults.size)
+        assertEquals("sentinel_wildcard_underscore", underscoreResults[0].id)
 
-        // Parameterized query security: raw SQL injection strings must not throw or alter query structure
+        // Negative check: query "reportXq3" should NOT match "report_q3" when underscore is escaped
+        val underscoreNegative = repository.filterNotifications(query = "reportXq3").first()
+        assertTrue(underscoreNegative.isEmpty())
+
+        // 3. Querying for escape character itself: '\'
+        val backslashItem = NotificationEntity(
+            id = "sentinel_backslash",
+            packageName = "com.dev.app",
+            title = "Path C:\\Users\\User",
+            body = "Log output in C:\\Logs",
+            eventTimeMs = 1000L,
+            capturedAtMs = 1000L
+        )
+        dao.insert(backslashItem)
+
+        val backslashResults = repository.filterNotifications(query = "C:\\Users").first()
+        assertEquals(1, backslashResults.size)
+        assertEquals("sentinel_backslash", backslashResults[0].id)
+
+        // 4. Parameterized query security: raw SQL injection strings must not throw or alter query structure
         val injectionString = "' OR '1'='1"
         val injectionResults = repository.filterNotifications(query = injectionString).first()
         assertTrue("Parameterized query prevents injection; no match expected", injectionResults.isEmpty())

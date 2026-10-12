@@ -46,9 +46,9 @@ interface NotificationDao {
 
     @Query("""
         SELECT * FROM archived_notifications
-        WHERE (title IS NOT NULL AND title LIKE '%' || :query || '%')
-           OR (body IS NOT NULL AND body LIKE '%' || :query || '%')
-           OR (appLabel IS NOT NULL AND appLabel LIKE '%' || :query || '%')
+        WHERE (title IS NOT NULL AND title LIKE '%' || :query || '%' ESCAPE '\')
+           OR (body IS NOT NULL AND body LIKE '%' || :query || '%' ESCAPE '\')
+           OR (appLabel IS NOT NULL AND appLabel LIKE '%' || :query || '%' ESCAPE '\')
         ORDER BY capturedAtMs DESC
     """)
     fun search(query: String): Flow<List<NotificationEntity>>
@@ -68,9 +68,9 @@ interface NotificationDao {
           AND (
               :query IS NULL
               OR :query = ''
-              OR (title IS NOT NULL AND title LIKE '%' || :query || '%')
-              OR (body IS NOT NULL AND body LIKE '%' || :query || '%')
-              OR (appLabel IS NOT NULL AND appLabel LIKE '%' || :query || '%')
+              OR (title IS NOT NULL AND title LIKE '%' || :query || '%' ESCAPE '\')
+              OR (body IS NOT NULL AND body LIKE '%' || :query || '%' ESCAPE '\')
+              OR (appLabel IS NOT NULL AND appLabel LIKE '%' || :query || '%' ESCAPE '\')
           )
         ORDER BY capturedAtMs DESC
     """)
