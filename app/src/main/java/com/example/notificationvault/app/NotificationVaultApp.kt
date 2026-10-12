@@ -102,19 +102,7 @@ fun NotificationVaultApp() {
         Scaffold(
             topBar = {
                 if (showMainTopBar) {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = "Notification Vault",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            titleContentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    )
+                    com.example.notificationvault.ui.common.InboxTopBar()
                 }
             }
         ) { innerPadding ->

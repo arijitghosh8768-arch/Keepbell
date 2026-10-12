@@ -13,24 +13,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,17 +40,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.notificationvault.R
 import com.example.notificationvault.domain.model.ArchivedNotification
-import com.example.notificationvault.ui.common.AppIcon
-import com.example.notificationvault.ui.common.EmptyStateView
-import com.example.notificationvault.ui.common.LoadingStateView
-import com.example.notificationvault.ui.common.rememberAppMetadata
-import com.example.notificationvault.ui.theme.BookmarkGold
-import com.example.notificationvault.util.DateTimeFormatter
+import com.example.notificationvault.ui.common.AppAvatar
+import com.example.notificationvault.ui.common.BookmarkButton
+import com.example.notificationvault.ui.common.EmptyInboxState
+import com.example.notificationvault.ui.common.LoadingState
+import com.example.notificationvault.ui.common.rememberAppIdentity
+import com.example.notificationvault.ui.theme.Spacing
+import com.example.notificationvault.util.formatFullTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +68,7 @@ fun DetailScreen(
                 title = {
                     Text(
                         text = "Saved Notification",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 },
@@ -92,29 +86,10 @@ fun DetailScreen(
                 actions = {
                     if (uiState is DetailUiState.Success) {
                         val notification = (uiState as DetailUiState.Success).notification
-                        IconButton(
-                            onClick = { viewModel.toggleBookmark(notification.isBookmarked) },
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                painter = if (notification.isBookmarked) {
-                                    painterResource(R.drawable.ic_star_filled)
-                                } else {
-                                    painterResource(R.drawable.ic_star_outline)
-                                },
-                                contentDescription = if (notification.isBookmarked) {
-                                    "Remove bookmark"
-                                } else {
-                                    "Bookmark notification"
-                                },
-                                tint = if (notification.isBookmarked) {
-                                    BookmarkGold
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                        BookmarkButton(
+                            isBookmarked = notification.isBookmarked,
+                            onToggle = { viewModel.toggleBookmark(notification.isBookmarked) }
+                        )
 
                         IconButton(
                             onClick = { showDeleteConfirmDialog = true },
@@ -143,18 +118,20 @@ fun DetailScreen(
         ) {
             when (val state = uiState) {
                 is DetailUiState.Loading -> {
-                    LoadingStateView(modifier = Modifier.align(Alignment.Center))
+                    LoadingState(modifier = Modifier.align(Alignment.Center))
                 }
 
                 is DetailUiState.NotFound -> {
-                    EmptyStateView(
-                        title = "Notification not found",
-                        description = "This record may have been deleted or expired from your archive.",
-                        icon = Icons.Default.Info,
-                        actionLabel = "Back to Inbox",
-                        onActionClick = onBackClick,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(Spacing.xl),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Notification not found or has been removed.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 is DetailUiState.Success -> {
@@ -212,9 +189,9 @@ private fun DetailContent(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val appMetadata by rememberAppMetadata(
+    val app = rememberAppIdentity(
         packageName = notification.packageName,
-        initialLabel = notification.appLabel
+        storedLabel = notification.appLabel
     )
     val launchIntent = remember(notification.packageName) {
         context.packageManager.getLaunchIntentForPackage(notification.packageName)
@@ -222,20 +199,20 @@ private fun DetailContent(
 
     Column(
         modifier = modifier
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
         // Source App Identity Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(Spacing.lg),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -243,17 +220,16 @@ private fun DetailContent(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AppIcon(
-                        icon = appMetadata.icon,
-                        label = appMetadata.label,
+                    AppAvatar(
+                        icon = app.icon,
                         size = 44.dp
                     )
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(Spacing.md))
 
                     Column {
                         Text(
-                            text = appMetadata.label,
+                            text = app.label,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -261,7 +237,7 @@ private fun DetailContent(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = notification.packageName,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -276,7 +252,7 @@ private fun DetailContent(
                                 Toast.makeText(context, "Unable to open application", Toast.LENGTH_SHORT).show()
                             }
                         },
-                        shape = RoundedCornerShape(10.dp)
+                        shape = MaterialTheme.shapes.small
                     ) {
                         Text(
                             text = "Open app",
@@ -291,18 +267,18 @@ private fun DetailContent(
         // Captured Notification Content Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(Spacing.lg)) {
                 Text(
                     text = "Captured Text",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
 
                 if (!notification.title.isNullOrBlank()) {
                     Text(
@@ -311,27 +287,26 @@ private fun DetailContent(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(Spacing.sm))
                 }
 
                 if (!notification.body.isNullOrBlank()) {
                     Text(
                         text = notification.body,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 } else if (notification.title.isNullOrBlank()) {
                     Text(
                         text = "No title or message body was provided in this alert snapshot.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     Text(
                         text = "No message body was provided in this alert snapshot.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -340,38 +315,38 @@ private fun DetailContent(
         // Snapshot Metadata Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(Spacing.lg)) {
                 Text(
                     text = "Snapshot Metadata",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
 
                 MetadataRow(
                     label = "Event time",
-                    value = DateTimeFormatter.format(notification.eventTimeMs)
+                    value = formatFullTime(notification.eventTimeMs)
                 )
 
                 HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    modifier = Modifier.padding(vertical = Spacing.xs),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
 
                 MetadataRow(
                     label = "Captured at",
-                    value = DateTimeFormatter.format(notification.capturedAtMs)
+                    value = formatFullTime(notification.capturedAtMs)
                 )
 
                 if (!notification.category.isNullOrBlank()) {
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        modifier = Modifier.padding(vertical = Spacing.xs),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
                     MetadataRow(
                         label = "Category",
@@ -381,7 +356,7 @@ private fun DetailContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Spacing.xl))
     }
 }
 
@@ -394,12 +369,12 @@ private fun MetadataRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
