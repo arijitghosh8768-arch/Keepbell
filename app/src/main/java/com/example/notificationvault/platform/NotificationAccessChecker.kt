@@ -9,13 +9,13 @@ import androidx.core.app.NotificationManagerCompat
  * Utility to verify whether the system notification listener access is enabled
  * and build the intent to navigate the user to Android's Notification Access settings.
  */
-class NotificationAccessChecker(private val context: Context) {
+open class NotificationAccessChecker(private val context: Context) {
 
     /**
      * Checks whether the current app package is present in the list of enabled
      * notification listener packages authorized by the user in system settings.
      */
-    fun isNotificationAccessGranted(): Boolean {
+    open fun isNotificationAccessGranted(): Boolean {
         val enabledPackages = NotificationManagerCompat.getEnabledListenerPackages(context)
         return enabledPackages.contains(context.packageName)
     }

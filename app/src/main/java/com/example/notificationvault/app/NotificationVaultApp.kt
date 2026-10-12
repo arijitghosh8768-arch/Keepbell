@@ -37,9 +37,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.compose.material.icons.filled.Settings
 import com.example.notificationvault.R
 import com.example.notificationvault.data.local.VaultDatabase
+import com.example.notificationvault.data.repository.CaptureSettingsRepositoryImpl
 import com.example.notificationvault.data.repository.NotificationRepositoryImpl
+import com.example.notificationvault.data.repository.RetentionSettingsRepositoryImpl
 import com.example.notificationvault.platform.NotificationAccessChecker
 import com.example.notificationvault.ui.bookmarks.BookmarksScreen
 import com.example.notificationvault.ui.bookmarks.BookmarksViewModel
@@ -50,6 +53,8 @@ import com.example.notificationvault.ui.inbox.InboxScreen
 import com.example.notificationvault.ui.inbox.InboxViewModel
 import com.example.notificationvault.ui.onboarding.OnboardingScreen
 import com.example.notificationvault.ui.onboarding.OnboardingViewModel
+import com.example.notificationvault.ui.settings.SettingsScreen
+import com.example.notificationvault.ui.settings.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,12 +64,32 @@ fun NotificationVaultApp() {
     val repository = remember(context) {
         NotificationRepositoryImpl(VaultDatabase.getInstance(context).notificationDao())
     }
+    val captureSettingsRepository = remember(context) {
+        CaptureSettingsRepositoryImpl(context)
+    }
+    val retentionSettingsRepository = remember(context) {
+        RetentionSettingsRepositoryImpl(context)
+    }
 
     val onboardingViewModel: OnboardingViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 return OnboardingViewModel(accessChecker) as T
+            }
+        }
+    )
+
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return SettingsViewModel(
+                    notificationRepository = repository,
+                    captureSettingsRepository = captureSettingsRepository,
+                    retentionSettingsRepository = retentionSettingsRepository,
+                    accessChecker = accessChecker
+                ) as T
             }
         }
     )
@@ -77,6 +102,7 @@ fun NotificationVaultApp() {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 onboardingViewModel.refreshPermissionStatus()
+                settingsViewModel.refreshPermissionStatus()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -107,14 +133,14 @@ fun NotificationVaultApp() {
         val currentBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = currentBackStackEntry?.destination?.route
 
-        val isMainDestination = currentRoute == "inbox" || currentRoute == "bookmarks"
+        val isMainDestination = currentRoute == "inbox" || currentRoute == "bookmarks" || currentRoute == "settings"
 
         Scaffold(
             topBar = {
-                if (currentRoute == "inbox") {
-                    InboxTopBar(title = "Keepbell")
-                } else if (currentRoute == "bookmarks") {
-                    InboxTopBar(title = "Bookmarks")
+                when (currentRoute) {
+                    "inbox" -> InboxTopBar(title = "Keepbell")
+                    "bookmarks" -> InboxTopBar(title = "Bookmarks")
+                    "settings" -> InboxTopBar(title = "Settings")
                 }
             },
             bottomBar = {
@@ -166,6 +192,28 @@ fun NotificationVaultApp() {
                             },
                             label = { Text("Bookmarks") }
                         )
+
+                        NavigationBarItem(
+                            selected = currentRoute == "settings",
+                            onClick = {
+                                if (currentRoute != "settings") {
+                                    navController.navigate("settings") {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings"
+                                )
+                            },
+                            label = { Text("Settings") }
+                        )
                     }
                 }
             }
@@ -215,6 +263,13 @@ fun NotificationVaultApp() {
                             onNotificationClick = { notificationId ->
                                 navController.navigate("detail/$notificationId")
                             }
+                        )
+                    }
+
+                    composable("settings") {
+                        SettingsScreen(
+                            viewModel = settingsViewModel,
+                            onOpenSystemSettingsClick = openSettings
                         )
                     }
 
