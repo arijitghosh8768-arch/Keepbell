@@ -48,6 +48,14 @@ class RetentionCleanupWorker(
         this.injectedClock = clock
     }
 
+    internal fun setInjectedRepositories(
+        notificationRepo: NotificationRepository,
+        retentionRepo: RetentionSettingsRepository
+    ) {
+        this.injectedNotificationRepository = notificationRepo
+        this.injectedRetentionSettingsRepository = retentionRepo
+    }
+
     override suspend fun doWork(): Result = withContext(injectedDispatcher) {
         try {
             val settingsRepo = injectedRetentionSettingsRepository ?: RetentionSettingsRepositoryImpl(applicationContext, injectedDispatcher)
