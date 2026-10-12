@@ -10,6 +10,7 @@ import com.example.notificationvault.ui.theme.NotificationVaultTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.example.notificationvault.worker.RetentionWorkerScheduler.schedulePeriodicCleanup(this)
         enableEdgeToEdge()
         setContent {
             NotificationVaultTheme {
