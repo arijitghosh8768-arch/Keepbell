@@ -4,8 +4,13 @@ import android.content.ActivityNotFoundException
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -18,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -31,9 +37,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.notificationvault.R
 import com.example.notificationvault.data.local.VaultDatabase
 import com.example.notificationvault.data.repository.NotificationRepositoryImpl
 import com.example.notificationvault.platform.NotificationAccessChecker
+import com.example.notificationvault.ui.bookmarks.BookmarksScreen
+import com.example.notificationvault.ui.bookmarks.BookmarksViewModel
+import com.example.notificationvault.ui.common.InboxTopBar
 import com.example.notificationvault.ui.details.DetailScreen
 import com.example.notificationvault.ui.details.DetailViewModel
 import com.example.notificationvault.ui.inbox.InboxScreen
@@ -97,12 +107,66 @@ fun NotificationVaultApp() {
         val currentBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = currentBackStackEntry?.destination?.route
 
-        val showMainTopBar = currentRoute == "inbox"
+        val isMainDestination = currentRoute == "inbox" || currentRoute == "bookmarks"
 
         Scaffold(
             topBar = {
-                if (showMainTopBar) {
-                    com.example.notificationvault.ui.common.InboxTopBar()
+                if (currentRoute == "inbox") {
+                    InboxTopBar(title = "Keepbell")
+                } else if (currentRoute == "bookmarks") {
+                    InboxTopBar(title = "Bookmarks")
+                }
+            },
+            bottomBar = {
+                if (isMainDestination) {
+                    NavigationBar {
+                        NavigationBarItem(
+                            selected = currentRoute == "inbox",
+                            onClick = {
+                                if (currentRoute != "inbox") {
+                                    navController.navigate("inbox") {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Inbox"
+                                )
+                            },
+                            label = { Text("Inbox") }
+                        )
+
+                        NavigationBarItem(
+                            selected = currentRoute == "bookmarks",
+                            onClick = {
+                                if (currentRoute != "bookmarks") {
+                                    navController.navigate("bookmarks") {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(
+                                        if (currentRoute == "bookmarks") R.drawable.ic_star_filled
+                                        else R.drawable.ic_star_outline
+                                    ),
+                                    contentDescription = "Bookmarks"
+                                )
+                            },
+                            label = { Text("Bookmarks") }
+                        )
+                    }
                 }
             }
         ) { innerPadding ->
@@ -130,6 +194,24 @@ fun NotificationVaultApp() {
                             viewModel = inboxViewModel,
                             isAccessGranted = uiState.isAccessGranted,
                             onOpenSettingsClick = openSettings,
+                            onNotificationClick = { notificationId ->
+                                navController.navigate("detail/$notificationId")
+                            }
+                        )
+                    }
+
+                    composable("bookmarks") {
+                        val bookmarksViewModel: BookmarksViewModel = viewModel(
+                            factory = object : ViewModelProvider.Factory {
+                                @Suppress("UNCHECKED_CAST")
+                                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                    return BookmarksViewModel(repository) as T
+                                }
+                            }
+                        )
+
+                        BookmarksScreen(
+                            viewModel = bookmarksViewModel,
                             onNotificationClick = { notificationId ->
                                 navController.navigate("detail/$notificationId")
                             }

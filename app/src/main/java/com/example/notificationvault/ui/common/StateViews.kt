@@ -96,6 +96,17 @@ fun NoResultsState(onClearFilters: () -> Unit, modifier: Modifier = Modifier) {
     )
 }
 
+/** Empty bookmarks state when no notifications are bookmarked. */
+@Composable
+fun EmptyBookmarksState(modifier: Modifier = Modifier) {
+    CenteredMessage(
+        icon = Icons.Filled.Notifications,
+        title = "No bookmarks yet",
+        message = "Tap the star icon on any notification card in your Inbox to save it here for quick access.",
+        modifier = modifier
+    )
+}
+
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
     Box(

@@ -12,11 +12,14 @@ import androidx.compose.ui.text.style.TextOverflow
 /** Compact brand bar. Pair with Scaffold + enableEdgeToEdge(); Scaffold supplies the insets. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InboxTopBar(modifier: Modifier = Modifier) {
+fun InboxTopBar(
+    title: String = "Keepbell",
+    modifier: Modifier = Modifier
+) {
     TopAppBar(
         title = {
             Text(
-                "Keepbell",
+                title,
                 style = MaterialTheme.typography.titleLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
