@@ -290,4 +290,37 @@ class InboxViewModelTest {
         val toggledBack = repository.getNotificationByIdOnce("id_bookmark")
         assertTrue(toggledBack?.isBookmarked == false)
     }
+
+    @Test
+    fun uiState_whenClearAllInvoked_reactivelyTransitionsFromSuccessToEmpty() = runTest(testDispatcher) {
+        val item1 = ArchivedNotification(
+            id = "id_1",
+            packageName = "com.test.app",
+            title = "Notice 1",
+            body = "Body 1",
+            eventTimeMs = 1000L,
+            capturedAtMs = 1000L
+        )
+        val item2 = ArchivedNotification(
+            id = "id_2",
+            packageName = "com.test.app",
+            title = "Notice 2",
+            body = "Body 2",
+            eventTimeMs = 2000L,
+            capturedAtMs = 2000L,
+            isBookmarked = true
+        )
+        repository.saveNotification(item1)
+        repository.saveNotification(item2)
+
+        val initialState = viewModel.uiState.first { it is InboxUiState.Success }
+        assertTrue("Inbox must initially be in Success state", initialState is InboxUiState.Success)
+        assertEquals(2, (initialState as InboxUiState.Success).notifications.size)
+
+        // Simulate Clear All invoked from Settings/Repository
+        repository.deleteAllNotifications()
+
+        val clearedState = viewModel.uiState.first { it is InboxUiState.Empty }
+        assertTrue("Inbox must reactively transition to Empty state upon Clear All", clearedState is InboxUiState.Empty)
+    }
 }

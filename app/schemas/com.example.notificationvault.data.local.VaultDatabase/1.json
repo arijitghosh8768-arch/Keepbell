@@ -1,0 +1,145 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "9e43d184641c138d4dda85033a96182e",
+    "entities": [
+      {
+        "tableName": "archived_notifications",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `packageName` TEXT NOT NULL, `appLabel` TEXT, `title` TEXT, `body` TEXT, `eventTimeMs` INTEGER NOT NULL, `capturedAtMs` INTEGER NOT NULL, `isBookmarked` INTEGER NOT NULL, `isRead` INTEGER NOT NULL, `category` TEXT, `expiresAtMs` INTEGER, `dedupeFingerprint` TEXT, `sourceNotificationKey` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "packageName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appLabel",
+            "columnName": "appLabel",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "body",
+            "columnName": "body",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "eventTimeMs",
+            "columnName": "eventTimeMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturedAtMs",
+            "columnName": "capturedAtMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isBookmarked",
+            "columnName": "isBookmarked",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isRead",
+            "columnName": "isRead",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "expiresAtMs",
+            "columnName": "expiresAtMs",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "dedupeFingerprint",
+            "columnName": "dedupeFingerprint",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "sourceNotificationKey",
+            "columnName": "sourceNotificationKey",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_archived_notifications_capturedAtMs",
+            "unique": false,
+            "columnNames": [
+              "capturedAtMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_archived_notifications_capturedAtMs` ON `${TABLE_NAME}` (`capturedAtMs`)"
+          },
+          {
+            "name": "index_archived_notifications_packageName_capturedAtMs",
+            "unique": false,
+            "columnNames": [
+              "packageName",
+              "capturedAtMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_archived_notifications_packageName_capturedAtMs` ON `${TABLE_NAME}` (`packageName`, `capturedAtMs`)"
+          },
+          {
+            "name": "index_archived_notifications_isBookmarked_capturedAtMs",
+            "unique": false,
+            "columnNames": [
+              "isBookmarked",
+              "capturedAtMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_archived_notifications_isBookmarked_capturedAtMs` ON `${TABLE_NAME}` (`isBookmarked`, `capturedAtMs`)"
+          },
+          {
+            "name": "index_archived_notifications_eventTimeMs",
+            "unique": false,
+            "columnNames": [
+              "eventTimeMs"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_archived_notifications_eventTimeMs` ON `${TABLE_NAME}` (`eventTimeMs`)"
+          }
+        ],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9e43d184641c138d4dda85033a96182e')"
+    ]
+  }
+}

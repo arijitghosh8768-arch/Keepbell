@@ -41,6 +41,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    sourceSets {
+        getByName("test").assets.srcDirs("$projectDir/schemas")
+    }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {

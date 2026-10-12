@@ -38,7 +38,7 @@ class CaptureProcessor(
         val rawPackageName = candidate.packageName.trim()
         if (rawPackageName.isEmpty()) return null
 
-        val normPackageName = rawPackageName.take(MAX_PACKAGE_NAME_LENGTH)
+        val normPackageName = rawPackageName.takeSurrogateSafe(MAX_PACKAGE_NAME_LENGTH)
 
         // 1. Check global capture toggle before any database access (TC-010, PRD FR-11)
         if (!captureSettingsRepository.getGlobalCaptureEnabled()) {
@@ -50,11 +50,11 @@ class CaptureProcessor(
             return null
         }
 
-        // 3. Normalize fields and enforce length caps (Threat T-05, TC-027)
-        val normAppLabel = candidate.appLabel?.trim()?.take(MAX_APP_LABEL_LENGTH)?.takeIf { it.isNotBlank() }
-        val normTitle = candidate.title?.trim()?.take(MAX_TITLE_LENGTH)?.takeIf { it.isNotBlank() }
-        val normBody = candidate.body?.trim()?.take(MAX_BODY_LENGTH)?.takeIf { it.isNotBlank() }
-        val normCategory = candidate.category?.trim()?.take(MAX_CATEGORY_LENGTH)?.takeIf { it.isNotBlank() }
+        // 3. Normalize fields and enforce length caps with surrogate-safe truncation (Threat T-05, TC-027)
+        val normAppLabel = candidate.appLabel?.trim()?.takeSurrogateSafe(MAX_APP_LABEL_LENGTH)?.takeIf { it.isNotBlank() }
+        val normTitle = candidate.title?.trim()?.takeSurrogateSafe(MAX_TITLE_LENGTH)?.takeIf { it.isNotBlank() }
+        val normBody = candidate.body?.trim()?.takeSurrogateSafe(MAX_BODY_LENGTH)?.takeIf { it.isNotBlank() }
+        val normCategory = candidate.category?.trim()?.takeSurrogateSafe(MAX_CATEGORY_LENGTH)?.takeIf { it.isNotBlank() }
         val sourceKey = candidate.sourceNotificationKey?.trim()?.takeIf { it.isNotBlank() }
 
         val capturedAtMs = currentTimeMillisProvider()
@@ -186,6 +186,20 @@ class CaptureProcessor(
         const val MAX_APP_LABEL_LENGTH = 128
         const val MAX_CATEGORY_LENGTH = 64
         const val DEFAULT_DUPLICATE_WINDOW_MS = 5000L
+
+        /**
+         * Truncates a string to at most [maxLength] code units, backing off by 1 code unit
+         * if the cut point would split a UTF-16 surrogate pair (such as an emoji).
+         */
+        fun String.takeSurrogateSafe(maxLength: Int): String {
+            if (length <= maxLength) return this
+            val cutLength = if (Character.isHighSurrogate(this[maxLength - 1])) {
+                maxLength - 1
+            } else {
+                maxLength
+            }
+            return substring(0, cutLength)
+        }
 
         /**
          * Computes a deterministic SHA-256 fingerprint from package, title, and body.

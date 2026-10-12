@@ -167,4 +167,38 @@ class BookmarksViewModelTest {
         assertTrue("Should be empty after deleting the only record", stateAfter is BookmarksUiState.Empty)
         assertNull(repository.getNotificationByIdOnce("item_to_delete_2"))
     }
+
+    @Test
+    fun uiState_whenClearAllInvoked_reactivelyTransitionsFromSuccessToEmpty() = runTest(testDispatcher) {
+        val bookmarked1 = ArchivedNotification(
+            id = "bm_1",
+            packageName = "com.test.app",
+            title = "Bookmark 1",
+            body = "Body 1",
+            isBookmarked = true,
+            eventTimeMs = 1000L,
+            capturedAtMs = 1000L
+        )
+        val bookmarked2 = ArchivedNotification(
+            id = "bm_2",
+            packageName = "com.test.app",
+            title = "Bookmark 2",
+            body = "Body 2",
+            isBookmarked = true,
+            eventTimeMs = 2000L,
+            capturedAtMs = 2000L
+        )
+        repository.saveNotification(bookmarked1)
+        repository.saveNotification(bookmarked2)
+
+        val initialState = viewModel.uiState.first { it is BookmarksUiState.Success }
+        assertTrue("Bookmarks must initially be in Success state", initialState is BookmarksUiState.Success)
+        assertEquals(2, (initialState as BookmarksUiState.Success).notifications.size)
+
+        // Simulate Clear All invoked from Settings/Repository (deletes all including bookmarks)
+        repository.deleteAllNotifications()
+
+        val clearedState = viewModel.uiState.first { it is BookmarksUiState.Empty }
+        assertTrue("Bookmarks must reactively transition to Empty state upon Clear All", clearedState is BookmarksUiState.Empty)
+    }
 }

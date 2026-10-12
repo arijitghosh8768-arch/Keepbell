@@ -41,11 +41,19 @@ class NotificationExtractor(
             }
         }
 
-        val title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val title = try {
+            extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        } catch (e: Exception) {
+            null
+        }
 
         // Extract body text: prioritize expanded big text, fallback to standard text
-        val body = extras?.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
-            ?: extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+        val body = try {
+            extras?.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+                ?: extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+        } catch (e: Exception) {
+            null
+        }
 
         val postTime = sbn.postTime
         val eventTimeMs = if (postTime > 0L) postTime else currentTimeMillisProvider()
