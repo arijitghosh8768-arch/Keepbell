@@ -11,18 +11,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,9 +45,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.notificationvault.R
 import com.example.notificationvault.domain.model.ArchivedNotification
+import com.example.notificationvault.ui.common.AppIcon
+import com.example.notificationvault.ui.common.EmptyStateView
+import com.example.notificationvault.ui.common.LoadingStateView
+import com.example.notificationvault.ui.common.rememberAppMetadata
+import com.example.notificationvault.ui.theme.BookmarkGold
 import com.example.notificationvault.util.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,7 +71,13 @@ fun DetailScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Saved Notification") },
+                title = {
+                    Text(
+                        text = "Saved Notification",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
                 navigationIcon = {
                     IconButton(
                         onClick = onBackClick,
@@ -68,7 +85,7 @@ fun DetailScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate back to inbox"
+                            contentDescription = "Back to inbox"
                         )
                     }
                 },
@@ -80,17 +97,22 @@ fun DetailScreen(
                             modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Star,
+                                painter = if (notification.isBookmarked) {
+                                    painterResource(R.drawable.ic_star_filled)
+                                } else {
+                                    painterResource(R.drawable.ic_star_outline)
+                                },
                                 contentDescription = if (notification.isBookmarked) {
                                     "Remove bookmark"
                                 } else {
                                     "Bookmark notification"
                                 },
                                 tint = if (notification.isBookmarked) {
-                                    MaterialTheme.colorScheme.primary
+                                    BookmarkGold
                                 } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                }
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 
@@ -101,14 +123,15 @@ fun DetailScreen(
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete notification",
-                                tint = MaterialTheme.colorScheme.error
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -120,33 +143,18 @@ fun DetailScreen(
         ) {
             when (val state = uiState) {
                 is DetailUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    LoadingStateView(modifier = Modifier.align(Alignment.Center))
                 }
 
                 is DetailUiState.NotFound -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Notification not found",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "This record may have been deleted or expired.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedButton(onClick = onBackClick) {
-                            Text("Back to Inbox")
-                        }
-                    }
+                    EmptyStateView(
+                        title = "Notification not found",
+                        description = "This record may have been deleted or expired from your archive.",
+                        icon = Icons.Default.Info,
+                        actionLabel = "Back to Inbox",
+                        onActionClick = onBackClick,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
 
                 is DetailUiState.Success -> {
@@ -162,8 +170,19 @@ fun DetailScreen(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete notification?") },
-            text = { Text("This record will be permanently deleted from your local archive.") },
+            title = {
+                Text(
+                    text = "Delete notification?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "This snapshot will be permanently removed from your local archive. This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -171,7 +190,11 @@ fun DetailScreen(
                         viewModel.deleteNotification(onDeleted = onBackClick)
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
@@ -189,144 +212,185 @@ private fun DetailContent(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val appMetadata by rememberAppMetadata(
+        packageName = notification.packageName,
+        initialLabel = notification.appLabel
+    )
     val launchIntent = remember(notification.packageName) {
         context.packageManager.getLaunchIntentForPackage(notification.packageName)
     }
 
     Column(
         modifier = modifier
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Source App Card
+        // Source App Identity Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    AppIcon(
+                        icon = appMetadata.icon,
+                        label = appMetadata.label,
+                        size = 44.dp
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column {
                         Text(
-                            text = notification.displayAppLabel,
-                            style = MaterialTheme.typography.titleLarge,
+                            text = appMetadata.label,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = notification.packageName,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
 
-                    if (launchIntent != null) {
-                        Button(
-                            onClick = {
-                                try {
-                                    context.startActivity(launchIntent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Unable to open application", Toast.LENGTH_SHORT).show()
-                                }
+                if (launchIntent != null) {
+                    FilledTonalButton(
+                        onClick = {
+                            try {
+                                context.startActivity(launchIntent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Unable to open application", Toast.LENGTH_SHORT).show()
                             }
-                        ) {
-                            Text("Open app")
-                        }
+                        },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(
+                            text = "Open app",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
         }
 
-        // Title and Body Content Card
+        // Captured Notification Content Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Captured Text",
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 if (!notification.title.isNullOrBlank()) {
                     Text(
                         text = notification.title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                } else {
-                    Text(
-                        text = "Title unavailable",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
 
                 if (!notification.body.isNullOrBlank()) {
                     Text(
                         text = notification.body,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+                    )
+                } else if (notification.title.isNullOrBlank()) {
+                    Text(
+                        text = "No title or message body was provided in this alert snapshot.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 } else {
                     Text(
-                        text = "No message body was provided in this notification.",
+                        text = "No message body was provided in this alert snapshot.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
             }
         }
 
-        // Metadata Card
+        // Snapshot Metadata Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = "Snapshot Metadata",
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                MetadataRow(
+                    label = "Event time",
+                    value = DateTimeFormatter.format(notification.eventTimeMs)
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
 
                 MetadataRow(
                     label = "Captured at",
                     value = DateTimeFormatter.format(notification.capturedAtMs)
                 )
-                MetadataRow(
-                    label = "Event timestamp",
-                    value = DateTimeFormatter.format(notification.eventTimeMs)
-                )
 
-                notification.category?.let { cat ->
-                    MetadataRow(label = "Category", value = cat)
+                if (!notification.category.isNullOrBlank()) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    )
+                    MetadataRow(
+                        label = "Category",
+                        value = notification.category
+                    )
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
 private fun MetadataRow(label: String, value: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
