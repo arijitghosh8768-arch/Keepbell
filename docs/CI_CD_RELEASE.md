@@ -29,14 +29,38 @@ Release:
 6. Publish to internal/closed testing only after human approval.
 7. Preserve checksums and release notes; do not publish test databases or private logs.
 
-## 3. Example GitHub Actions workflow
+## 3. GitHub Actions workflows
 
-The accompanying `.github/workflows/android-ci.yml` is a starter template. Pin action versions to reviewed immutable commit SHAs before using it for production. Verify Java and SDK versions against the actual Gradle configuration. CI configuration may need changes as Android Gradle Plugin versions evolve.
+The project maintains two distinct GitHub Actions workflows with strict permission separation:
 
-## 4. Signing security
+1. **Pull Request & Branch CI** (`.github/workflows/android-ci.yml`):
+   - Automatically triggered on pull requests and pushes to `main`.
+   - Runs unit tests, lint, and builds `assembleDebug`.
+   - Never has access to release signing secrets.
+2. **Release Build & Verification** (`.github/workflows/android-release.yml`):
+   - Triggered manually via `workflow_dispatch` or on release tag pushes (`v*`).
+   - Injects release credentials through encrypted repository secrets into runner temp storage.
+   - Enforces strict signing (`REQUIRE_RELEASE_SIGNING=true`).
+   - Runs tests, lint, signed assembly, and verifies the resulting APK with `apksigner`.
+   - Computes SHA-256 checksums and uploads artifacts with a 14-day retention.
+   - **Does not publish public releases automatically**: Distribution requires manual human approval and physical-device verification.
+
+## 4. Signing security and CI configuration
+
+### GitHub repository secrets configuration
+To enable the release workflow in GitHub, configure the following encrypted repository secrets under **Settings > Secrets and variables > Actions**:
+
+| Secret Name | Description | Encoding / Source |
+| :--- | :--- | :--- |
+| `RELEASE_KEYSTORE_BASE64` | Base64-encoded release `.keystore` / `.jks` file | `base64 -w 0 release.keystore` (Linux/macOS)<br>`[Convert]::ToBase64String([IO.File]::ReadAllBytes('release.keystore'))` (PowerShell) |
+| `RELEASE_KEYSTORE_PASSWORD` | Password for the release keystore | Plain text secret string |
+| `RELEASE_KEY_ALIAS` | Alias name of the signing key entry | Plain text secret string |
+| `RELEASE_KEY_PASSWORD` | Password for the private signing key | Plain text secret string |
+
+*Never commit real passwords, base64 keystore strings, or keystore files to the repository.*
 
 ### Credential sources and precedence
-The release build resolves credentials in the following order:
+The Gradle build resolves credentials in the following order:
 1. **Environment Variables**:
    - `KEYSTORE_PATH`: Path to the `.jks` or `.keystore` file (resolved relative to repository root or absolute).
    - `KEYSTORE_PASSWORD`: Keystore password.
@@ -55,31 +79,42 @@ The release build resolves credentials in the following order:
 - **Strict Enforcement**: When `REQUIRE_RELEASE_SIGNING=true` (or `-PrequireReleaseSigning=true`) is set, Gradle immediately fails the build if credentials are missing or incomplete.
 - **Partial Credential Safeguard**: If any credential is supplied but not all four, or if the specified keystore file does not exist, the build fails fast with a safe error message that never prints secret values.
 
-### CI secret injection
-- Store the release keystore as a Base64-encoded repository secret (`RELEASE_KEYSTORE_BASE64`).
-- Store passwords and alias as repository secrets (`RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`).
-- In the release workflow, decode the keystore to a temporary directory outside the repository (`${{ runner.temp }}/release.keystore`), set `REQUIRE_RELEASE_SIGNING=true`, and always remove the temporary file in a post-build step.
+### How to trigger a release build
+- **GitHub Web UI**: Go to **Actions** > **Android Release Build** > click **Run workflow** > optionally enter the version tag (e.g., `v0.1.0-beta01`) > click **Run workflow**.
+- **GitHub CLI**: `gh workflow run android-release.yml -f release_tag=v0.1.0-beta01`
+- **Git Tag Push**: `git tag v0.1.0-beta01 && git push origin v0.1.0-beta01`
 
-### Post-build verification
-Verify the signed APK and generate checksums before distribution:
-```bash
-# Verify signing scheme (v1/v2/v3) and certificate
-apksigner verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+### Downloading and independently verifying the artifact
+1. Download the artifact bundle `keepbell-release-apk` from the completed workflow run.
+2. Unzip the bundle to obtain `app-release.apk` and `app-release.apk.sha256`.
+3. Verify the checksum:
+   ```powershell
+   # PowerShell
+   (Get-FileHash -Path app-release.apk -Algorithm SHA256).Hash
+   Get-Content app-release.apk.sha256
+   ```
+   ```bash
+   # Linux / macOS
+   sha256sum -c app-release.apk.sha256
+   ```
+4. Verify signature validity and signing certificate:
+   ```bash
+   apksigner verify --verbose --print-certs app-release.apk
+   ```
+   Confirm that:
+   - `Verifies: true`
+   - Required signing schemes (v1, v2, v3) are enabled.
+   - Signer certificate matches the intended organization and is not the default Android debug certificate.
 
-# Generate SHA-256 fingerprint (PowerShell)
-Get-FileHash -Path app/build/outputs/apk/release/app-release.apk -Algorithm SHA256
+### Why automated publishing is disabled
+Keepbell explicitly avoids auto-publishing APKs to GitHub Releases or app stores on build completion. This design enforces an essential human quality and safety gate:
+- Notification listener permissions, service bindings, reboot restoration, and battery-optimization behavior cannot be validated inside a headless CI runner.
+- Every release candidate must undergo physical-device smoke testing and privacy policy review before distribution.
 
-# Linux / macOS
-sha256sum app/build/outputs/apk/release/app-release.apk
-```
-
-### General security guidelines
-- Never commit `.jks`, `.keystore`, signing passwords, service-account JSON, or API tokens.
-- Add local signing files to `.gitignore`.
-- Prefer Play App Signing for Play distribution, after reviewing current official guidance.
-- Store upload key and passwords in a managed secret store.
-- Restrict release workflow permissions and use environment approval where available.
-- Rotate exposed credentials and follow incident procedure if a secret leaks.
+### Keystore backup and preservation
+- The signing key defines the cryptographic identity of the application.
+- Android strictly prohibits updating an installed app with an APK signed by a different key without a full uninstall (which permanently wipes the user's local notification database).
+- Store backup copies of the release keystore and its passwords in secure, redundant, off-repository secret storage (such as an encrypted password manager or hardware security module).
 
 ## 5. Versioning
 
