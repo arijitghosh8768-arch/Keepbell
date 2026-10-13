@@ -7,17 +7,23 @@ name: Android Release Build
         description: 'Release version tag (e.g. v0.1.0-beta01)'
         required: false
         default: ''
-  push:
-    tags:
-      - 'v*'
+  # Tag-based triggers ('push: tags: [v*]') are intentionally omitted during initial
+  # rollout to prevent arbitrary tagged code from accessing release signing secrets.
+  # Re-enable only after Tag Protection Rules and environment approval are enforced.
 
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-release:
+    name: Build Signed Release APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: release
 
     steps:
       - name: Checkout repository

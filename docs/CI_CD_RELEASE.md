@@ -38,8 +38,9 @@ The project maintains two distinct GitHub Actions workflows with strict permissi
    - Runs unit tests, lint, and builds `assembleDebug`.
    - Never has access to release signing secrets.
 2. **Release Build & Verification** (`.github/workflows/android-release.yml`):
-   - Triggered manually via `workflow_dispatch` or on release tag pushes (`v*`).
-   - Injects release credentials through encrypted repository secrets into runner temp storage.
+   - Triggered manually via `workflow_dispatch` (Actions tab in GitHub UI or GitHub CLI).
+   - Protected by the `release` GitHub Environment (requires reviewer approval before secrets are unlocked).
+   - Injects release credentials through encrypted repository or environment secrets into runner temp storage.
    - Enforces strict signing (`REQUIRE_RELEASE_SIGNING=true`).
    - Runs tests, lint, signed assembly, and verifies the resulting APK with `apksigner`.
    - Computes SHA-256 checksums and uploads artifacts with a 14-day retention.
@@ -47,8 +48,15 @@ The project maintains two distinct GitHub Actions workflows with strict permissi
 
 ## 4. Signing security and CI configuration
 
+### GitHub Environment & Review Gates
+To protect release signing secrets against unauthorized or unreviewed builds:
+1. Navigate to repository **Settings > Environments > New environment** and name it `release`.
+2. Enable **Required reviewers** and assign authorized release leads.
+3. (Optional) Set **Deployment branches** to restrict execution to approved release branches (e.g., `main` or `release/*`).
+4. Any workflow execution will pause and request explicit approval from reviewers before secrets are decrypted and the build begins.
+
 ### GitHub repository secrets configuration
-To enable the release workflow in GitHub, configure the following encrypted repository secrets under **Settings > Secrets and variables > Actions**:
+Configure the following encrypted secrets under **Settings > Environments > release** (or **Settings > Secrets and variables > Actions**):
 
 | Secret Name | Description | Encoding / Source |
 | :--- | :--- | :--- |
@@ -58,6 +66,23 @@ To enable the release workflow in GitHub, configure the following encrypted repo
 | `RELEASE_KEY_PASSWORD` | Password for the private signing key | Plain text secret string |
 
 *Never commit real passwords, base64 keystore strings, or keystore files to the repository.*
+
+### Production keystore generation procedure (when ready)
+When preparing for production distribution, generate the official keystore on a secure workstation:
+```bash
+keytool -genkeypair -v \
+  -keystore keepbell-release.jks \
+  -alias keepbell \
+  -keyalg RSA \
+  -keysize 4096 \
+  -validity 10000 \
+  -dname "CN=Keepbell Release, O=Keepbell, C=US"
+```
+**Security requirements**:
+- Store the keystore and passwords in an encrypted password manager or Hardware Security Module (HSM).
+- Create an offline encrypted backup. Losing this key prevents issuing app updates to existing users.
+- Convert the keystore to Base64 to populate the `RELEASE_KEYSTORE_BASE64` secret.
+- **Never** place the keystore inside the project workspace or track it in Git.
 
 ### Credential sources and precedence
 The Gradle build resolves credentials in the following order:
@@ -80,9 +105,9 @@ The Gradle build resolves credentials in the following order:
 - **Partial Credential Safeguard**: If any credential is supplied but not all four, or if the specified keystore file does not exist, the build fails fast with a safe error message that never prints secret values.
 
 ### How to trigger a release build
-- **GitHub Web UI**: Go to **Actions** > **Android Release Build** > click **Run workflow** > optionally enter the version tag (e.g., `v0.1.0-beta01`) > click **Run workflow**.
+- **GitHub Web UI**: Go to **Actions** > **Android Release Build** > click **Run workflow** > enter release tag or leave blank > click **Run workflow**. Reviewers will receive an approval prompt.
 - **GitHub CLI**: `gh workflow run android-release.yml -f release_tag=v0.1.0-beta01`
-- **Git Tag Push**: `git tag v0.1.0-beta01 && git push origin v0.1.0-beta01`
+- *Note*: Tag-based push triggers (`push: tags: ['v*']`) are deliberately disabled until repository Tag Protection Rules and team permissions are verified.
 
 ### Downloading and independently verifying the artifact
 1. Download the artifact bundle `keepbell-release-apk` from the completed workflow run.
