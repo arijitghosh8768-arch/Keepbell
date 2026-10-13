@@ -51,6 +51,28 @@ Use synthetic notifications with obvious sentinel strings such as `PRIVATE_SENTI
 | TC-031 | Retention boundary timestamp | Cutoff inclusivity matches documented rule |
 | TC-032 | Export (if enabled) | Explicit user action, warning, user-chosen destination, no upload |
 
+### 3.1 Automated Security & Privacy Test Coverage (Task 4.4)
+
+#### TC-025: Notification Payload Logging Audit
+- **Test Class:** `com.example.notificationvault.security.PrivacyLoggingAuditTest`
+- **Methodology:** Exercises full capture pipeline, exclusion evaluation, and SQLite database write failure handling with identifiable sentinel strings (`PRIVATE_SENTINEL_DO_NOT_LOG_8472`, `Confidential OTP code 491028 for account verification`, `SECRET_EXTRA_DATA_VALUE_99182`).
+- **Verifications:**
+  - `capturePipeline_processesSentinelNotification_withoutEmittingPayloadToLogs`: Ingests sentinel notification, confirms persistence into local Room database on `Dispatchers.IO`, and verifies 0% presence across all Robolectric Logcat priorities (V, D, I, W, E, WTF), stdout, and stderr.
+  - `capturePipeline_excludedPackage_doesNotEmitPayloadToLogs`: Validates package exclusion decisions do not log notification payloads.
+  - `capturePipeline_databaseFailure_doesNotEmitPayloadToLogs`: Injects simulated `SQLiteDiskIOException` during Room insert and asserts sanitized exception handling leaves no payload traces in Logcat or console streams.
+- **Status:** Automated, PASS (3/3 tests passing).
+
+#### TC-026: Manifest Permissions & Dependency Security Audit
+- **Test Class:** `com.example.notificationvault.security.ManifestAndDependencyAuditTest`
+- **Methodology:** Audits source manifest (`app/src/main/AndroidManifest.xml`) and effective merged manifests (`debug` and `release`), as well as version catalogs and runtime classpaths.
+- **Verifications:**
+  - `manifestAudit_prohibitsUnapprovedPermissionsInAllManifests`: Confirms zero forbidden permissions (`INTERNET`, `ACCESS_NETWORK_STATE`, SMS, contacts, location, mic, camera, accessibility) in source and merged manifests. Verifies `ACCESS_NETWORK_STATE` introduced transitively by WorkManager is stripped via `tools:node="remove"`.
+  - `manifestAudit_allowBackupIsExplicitlyDisabled`: Asserts `android:allowBackup="false"` in effective application configurations.
+  - `manifestAudit_notificationListenerService_isProperlyProtected`: Asserts `VaultNotificationListener` is exported (`true`) and strictly protected by `android.permission.BIND_NOTIFICATION_LISTENER_SERVICE`.
+  - `manifestAudit_exportedComponents_areStrictlyControlled`: Verifies only `MainActivity` is an exported app activity; all exported library components are protected by system permissions (`BIND_JOB_SERVICE`, `DUMP`); all content providers are non-exported (`exported="false"`).
+  - `dependencyAudit_noUnauthorizedTelemetryOrAnalyticsDeclared`: Audits Gradle version catalog (`libs.versions.toml`), `app/build.gradle.kts`, and resolved runtime classpaths (`debugRuntimeClasspath` and `releaseRuntimeClasspath`) to guarantee zero telemetry, analytics, ad networks, or crash-reporting SDKs.
+- **Status:** Automated, PASS (5/5 tests passing).
+
 ## 4. Commands
 
 Run from repository root, adapting task names to the actual Gradle project:
