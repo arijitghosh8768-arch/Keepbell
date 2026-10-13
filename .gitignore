@@ -1,25 +1,54 @@
-# Gradle / Android
+# Gradle & Build outputs
 .gradle/
 build/
 **/build/
-local.properties
-*.iml
+bin/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Android Studio & IntelliJ IDEA
 .idea/
+*.iml
+.navigation/
 captures/
 .externalNativeBuild/
 .cxx/
+output-metadata.json
 
-# Signing / secrets
+# Local SDK and configuration
+local.properties
+
+# Signing, keystores & secrets
 *.jks
 *.keystore
 keystore.properties
-.env
-.env.*
-secrets/
+!keystore.properties.example
 *.p12
 *.pem
+*.key
+*.pk8
+*.b64
+secrets/
+.env
+.env.*
+.env.local
 
-# OS/editor
+# Memory dumps and diagnostics
+*.hprof
+*.log
+
+# Kotlin & Compiler artifacts
+.kotlin/
+.ksp/
+
+# OS and Editor files
 .DS_Store
 Thumbs.db
-.kotlin/
+ehthumbs.db
+*~
+*.swp
+*.swo
+.vscode/
