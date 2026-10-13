@@ -35,6 +35,45 @@ The accompanying `.github/workflows/android-ci.yml` is a starter template. Pin a
 
 ## 4. Signing security
 
+### Credential sources and precedence
+The release build resolves credentials in the following order:
+1. **Environment Variables**:
+   - `KEYSTORE_PATH`: Path to the `.jks` or `.keystore` file (resolved relative to repository root or absolute).
+   - `KEYSTORE_PASSWORD`: Keystore password.
+   - `KEY_ALIAS`: Key alias.
+   - `KEY_PASSWORD`: Key password.
+2. **Local Untracked Configuration** (`keystore.properties` in repository root):
+   - `storeFile`: Path to keystore file.
+   - `storePassword`: Keystore password.
+   - `keyAlias`: Key alias.
+   - `keyPassword`: Key password.
+   *(See `keystore.properties.example` for the template).*
+3. **Gradle Project Properties** (e.g., `-PstoreFile=...`).
+
+### Build behavior and enforcement
+- **Default Local Pre-Flight**: When no signing credentials are provided and strict mode is off, `assembleRelease` produces an explicitly unsigned APK (`app-release-unsigned.apk`). Debug signing is never used as a fallback for release builds.
+- **Strict Enforcement**: When `REQUIRE_RELEASE_SIGNING=true` (or `-PrequireReleaseSigning=true`) is set, Gradle immediately fails the build if credentials are missing or incomplete.
+- **Partial Credential Safeguard**: If any credential is supplied but not all four, or if the specified keystore file does not exist, the build fails fast with a safe error message that never prints secret values.
+
+### CI secret injection
+- Store the release keystore as a Base64-encoded repository secret (`RELEASE_KEYSTORE_BASE64`).
+- Store passwords and alias as repository secrets (`RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`).
+- In the release workflow, decode the keystore to a temporary directory outside the repository (`${{ runner.temp }}/release.keystore`), set `REQUIRE_RELEASE_SIGNING=true`, and always remove the temporary file in a post-build step.
+
+### Post-build verification
+Verify the signed APK and generate checksums before distribution:
+```bash
+# Verify signing scheme (v1/v2/v3) and certificate
+apksigner verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
+
+# Generate SHA-256 fingerprint (PowerShell)
+Get-FileHash -Path app/build/outputs/apk/release/app-release.apk -Algorithm SHA256
+
+# Linux / macOS
+sha256sum app/build/outputs/apk/release/app-release.apk
+```
+
+### General security guidelines
 - Never commit `.jks`, `.keystore`, signing passwords, service-account JSON, or API tokens.
 - Add local signing files to `.gitignore`.
 - Prefer Play App Signing for Play distribution, after reviewing current official guidance.
